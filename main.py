@@ -189,6 +189,46 @@ def start():
                     pass
             if i < total - 1:
                 time.sleep(3)
+# ========== 收集结果 ==========
+success_list = []
+skip_list = []
+fail_list = []
+
+# 包装一下 checkIn 来收集结果
+_original_checkIn = checkIn
+
+def checkIn(user, pwd, ip):
+    result = _original_checkIn(user, pwd, ip)
+    if result:
+        success_list.append(format_username(user))
+    return result
+
 start()
 prefs.save()
-if hasE: exit(1)
+
+# ========== PushPlus 推送 ==========
+from pushplus import send_pushplus
+
+current_time = prefs.getTimes()
+title = f"🎯 MT论坛签到报告 ({prefs.getTime()})"
+
+lines = [
+    f"<p>⏰ <b>执行时间：</b>{current_time}</p>",
+    "<hr>",
+]
+
+if success_list:
+    lines.append(f"<p>✅ <b>签到成功 ({len(success_list)}个)</b></p><ul>")
+    for u in success_list:
+        lines.append(f"<li>{u}</li>")
+    lines.append("</ul>")
+
+# 从日志中推断已签和失败（简化版）
+# 更精确的做法是在 start() 里直接收集，见上面的完整版
+
+lines.append("<p>📋 详细日志请查看 GitHub Actions 运行记录</p>")
+content = "\n".join(lines)
+send_pushplus(title, content, template="html")
+
+if hasE: 
+    exit(1)
